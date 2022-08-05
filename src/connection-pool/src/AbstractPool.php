@@ -15,6 +15,7 @@ use Swoft\Connection\Pool\Contract\ConnectionInterface;
 use Swoft\Connection\Pool\Contract\PoolInterface;
 use Swoft\Connection\Pool\Exception\ConnectionPoolException;
 use Swoft\Log\Helper\CLog;
+use Swoft\Log\Helper\Log;
 use Swoole\Coroutine\Channel;
 use Throwable;
 
@@ -283,28 +284,30 @@ abstract class AbstractPool implements PoolInterface
     private function popByChannel(): ?ConnectionInterface
     {
         $time = time();
-
         while (!$this->channel->isEmpty()) {
-            /* @var ConnectionInterface $connection */
-            $connection = $this->channel->pop();
+            try {
+                /* @var ConnectionInterface $connection */
+                $connection = $this->channel->pop($this->maxIdleTime);//$connection is none
+            }catch(Throwable $e) {
+                Log::error('[AbstractPool->popByChannel()] popByChannel close connection error1 ' . $e->getMessage());
+            }
+            if(empty($connection)){//$connection is none and break
+                break;
+            }
             $lastTime   = $connection->getLastTime();
-
             // Out of `maxIdleTime`
             if ($time - $lastTime > $this->maxIdleTime) {
                 try {
                     // Fix expired connection not released, May be disconnected
                     $connection->close();
                 } catch (Throwable $e) {
-                    CLog::warning('popByChannel close connection error ' . $e->getMessage());
+                    Log::error('[AbstractPool->popByChannel()] popByChannel close connection error2 ' . $e->getMessage());
                 }
-
                 $this->count--;
                 continue;
             }
-
             return $connection;
         }
-
         return null;
     }
 
