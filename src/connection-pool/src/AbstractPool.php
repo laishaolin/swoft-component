@@ -15,6 +15,7 @@ use Swoft\Connection\Pool\Contract\ConnectionInterface;
 use Swoft\Connection\Pool\Contract\PoolInterface;
 use Swoft\Connection\Pool\Exception\ConnectionPoolException;
 use Swoft\Log\Helper\CLog;
+use Swoft\Log\Helper\Log;
 use Swoole\Coroutine\Channel;
 use Throwable;
 
