@@ -283,28 +283,30 @@ abstract class AbstractPool implements PoolInterface
     private function popByChannel(): ?ConnectionInterface
     {
         $time = time();
-
         while (!$this->channel->isEmpty()) {
-            /* @var ConnectionInterface $connection */
-            $connection = $this->channel->pop();
+            try {
+                /* @var ConnectionInterface $connection */
+                $connection = $this->channel->pop($this->maxIdleTime);//$connection is none
+            }catch(Throwable $e) {
+                Log::error('[AbstractPool->popByChannel()] popByChannel close connection error1 ' . $e->getMessage());//20220802
+            }
+            if(empty($connection)){//$connection is none and break
+                break;
+            }
             $lastTime   = $connection->getLastTime();
-
             // Out of `maxIdleTime`
             if ($time - $lastTime > $this->maxIdleTime) {
                 try {
                     // Fix expired connection not released, May be disconnected
                     $connection->close();
                 } catch (Throwable $e) {
-                    CLog::warning('popByChannel close connection error ' . $e->getMessage());
+                    Log::error('[AbstractPool->popByChannel()] popByChannel close connection error2 ' . $e->getMessage());//20220802
                 }
-
                 $this->count--;
                 continue;
             }
-
             return $connection;
         }
-
         return null;
     }
 
